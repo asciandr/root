@@ -63,14 +63,14 @@ public:
     return new RooDataHist(newName?newName:GetName(),newTitle?newTitle:GetTitle(),vars?*vars:*get()) ; 
   }
 
-  // Add one ore more rows of data
+  /// Add wgt to the bin content enclosed by the coordinates passed in `row`.
   virtual void add(const RooArgSet& row, Double_t wgt=1.0) { 
     // Increment weight of bin enclosing coordinate stored in row by wgt
     add(row,wgt,-1.) ; 
   }
   virtual void add(const RooArgSet& row, Double_t weight, Double_t sumw2) ;
-  void set(Double_t weight, Double_t wgtErr=-1) ;
-  void set(const RooArgSet& row, Double_t weight, Double_t wgtErr=-1) ;
+  void set(Double_t weight, Double_t wgtErr=-1, std::size_t binNumber = std::numeric_limits<std::size_t>::max());
+  void set(const RooArgSet& row, Double_t weight, Double_t wgtErr=-1.) ;
   void set(const RooArgSet& row, Double_t weight, Double_t wgtErrLo, Double_t wgtErrHi) ;
 
   void add(const RooAbsData& dset, const RooFormulaVar* cutVar=0, Double_t weight=1.0 ) ;
@@ -107,15 +107,21 @@ public:
     // Return weight of current bin
     return get_curWeight();
   }
-  Double_t weightSquared() const ;
+  Double_t weightSquared() const {
+    return get_curSumW2();
+  }
   Double_t weight(const RooArgSet& bin, Int_t intOrder=1, Bool_t correctForBinSize=kFALSE, Bool_t cdfBoundaries=kFALSE, Bool_t oneSafe=kFALSE) ;   
-  Double_t binVolume() const { return _curVolume ; }
+  Double_t binVolume() const { return _binv[_curIndex]; }
   Double_t binVolume(const RooArgSet& bin) ; 
-  virtual Bool_t valid() const ;
+
+  /// Return true if currently loaded coordinate is considered valid within
+  /// the current range definitions of all observables.
+  bool valid() const { return _binValid.empty() ? true : _binValid[_curIndex];}
 
   TIterator* sliceIterator(RooAbsArg& sliceArg, const RooArgSet& otherArgs) ;
   
   virtual void weightError(Double_t& lo, Double_t& hi, ErrorType etype=Poisson) const ;
+  /// Return the error of the weight of the last-retrieved entry. See also weightError(Double_t&,Double_t&,ErrorType) const.
   virtual Double_t weightError(ErrorType etype=Poisson) const { 
     // Return symmetric error on current bin calculated either from Poisson statistics or from SumOfWeights
     Double_t lo,hi ;
@@ -140,14 +146,14 @@ public:
 
   void removeSelfFromDir() { removeFromDir(this) ; }
 
-protected:
+private:
 
   friend class RooAbsCachedPdf ;
   friend class RooAbsCachedReal ;
   friend class RooDataHistSliceIter ;
   friend class RooAbsOptTestStatistic ;
 
-  Int_t calcTreeIndex() const ;
+  std::size_t calcTreeIndex() const ;
   void cacheValidEntries() ;
 
   void setAllWeights(Double_t value) ;
@@ -168,40 +174,36 @@ protected:
 
   virtual RooAbsData* cacheClone(const RooAbsArg* newCacheOwner, const RooArgSet* newCacheVars, const char* newName=0) ;
 
-  Double_t get_wgt(const Int_t &idx) const { return _wgt[idx]; }
-  Double_t get_errLo(const Int_t &idx) const { return _errLo[idx]; }
-  Double_t get_errHi(const Int_t &idx) const { return _errHi[idx]; }
-  Double_t get_sumw2(const Int_t &idx) const { return _sumw2[idx]; }
+  Double_t get_wgt(std::size_t idx)   const { return _wgt[idx]; }
+  Double_t get_errLo(std::size_t idx) const { return _errLo.empty() ? -1 : _errLo[idx]; }
+  Double_t get_errHi(std::size_t idx) const { return _errHi.empty() ? -1 : _errHi[idx]; }
+  /// Return sumw2 of corresponding bin. If this is not being tracked, assume that only weights
+  /// == 1. were filled.
+  Double_t get_sumw2(std::size_t idx) const { return _sumw2.empty() ? _wgt[idx] : _sumw2[idx];}
 
-  Double_t get_curWeight() const { return _curWeight; }
-  Double_t get_curWgtErrLo() const { return _curWgtErrLo; }
-  Double_t get_curWgtErrHi() const { return _curWgtErrHi; }
-  Double_t get_curSumW2() const { return _curSumW2; }
+  Double_t get_curWeight()   const { return get_wgt(_curIndex); }
+  Double_t get_curWgtErrLo() const { return get_errLo(_curIndex); }
+  Double_t get_curWgtErrHi() const { return get_errHi(_curIndex); }
+  Double_t get_curSumW2()    const { return get_sumw2(_curIndex); }
 
   Int_t get_curIndex() const { return _curIndex; }
 
-  Int_t       _arrSize ; //  Size of the weight array
-  std::vector<Int_t> _idxMult ; // Multiplier jump table for index calculation
+  std::vector<Int_t> _idxMult ; //! Multiplier jump table for index calculation
 
-  Double_t*       _wgt ; //[_arrSize] Weight array
-  Double_t*     _errLo ; //[_arrSize] Low-side error on weight array
-  Double_t*     _errHi ; //[_arrSize] High-side error on weight array
-  Double_t*     _sumw2 ; //[_arrSize] Sum of weights^2
-  Double_t*      _binv ; //[_arrSize] Bin volume array  
+  std::vector<double> _wgt;   // Weight array
+  std::vector<double> _errLo; // Low-side error on weight array
+  std::vector<double> _errHi; // High-side error on weight array
+  std::vector<double> _sumw2; // Sum of weights^2
+  std::vector<double> _binv;  // Bin volume array
 
   RooArgSet  _realVars ; // Real dimensions of the dataset 
-  Bool_t*    _binValid ; //! Valid bins with current range definition
+  std::vector<bool> _binValid; //! Valid bins with current range definition
  
-  mutable Double_t _curWeight{0.}; // Weight associated with the current coordinate
-  mutable Double_t _curWgtErrLo{0.}; // Error on weight associated with the current coordinate
-  mutable Double_t _curWgtErrHi{0.}; // Error on weight associated with the current coordinate
-  mutable Double_t _curSumW2{0.}; // Current sum of weights^2
-  mutable Double_t _curVolume{0.}; // Volume of bin enclosing current coordinate
-  mutable Int_t    _curIndex{0}; // Current index
+  mutable std::size_t _curIndex{0}; // Current index
 
   mutable std::vector<Double_t>* _pbinv ; //! Partial bin volume array
   mutable RooCacheManager<std::vector<Double_t> > _pbinvCacheMgr ; //! Cache manager for arrays of partial bin volumes
-  std::vector<RooAbsLValue*> _lvvars ; //! List of observables casted as RooAbsLValue
+  std::vector<const RooAbsLValue*> _lvvars ; //! List of observables casted as RooAbsLValue
   std::vector<const RooAbsBinning*> _lvbins ; //! List of used binnings associated with lvalues
   mutable std::vector<std::vector<Double_t> > _binbounds; //! list of bin bounds per dimension
 
@@ -211,8 +213,9 @@ protected:
 
 private:
   void _adjustBinning(RooRealVar &theirVar, const TAxis &axis, RooRealVar *ourVar, Int_t *offset);
+  void registerWeightArraysToDataStore() const;
 
-  ClassDef(RooDataHist,4) // Binned data set
+  ClassDef(RooDataHist, 5) // Binned data set
 };
 
 #endif

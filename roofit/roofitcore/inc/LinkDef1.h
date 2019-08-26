@@ -78,6 +78,23 @@
 #pragma link C++ class RooConvIntegrandBinding+ ;
 #pragma link C++ class RooCurve+ ;
 #pragma link C++ class RooCustomizer+ ;
+#pragma read sourceClass="RooDataHist" targetClass="RooDataHist" version="[3-4]" \
+  source="Int_t _arrSize; Double_t* _wgt; Double_t* _errLo; Double_t* _errHi; Double_t* _sumw2; Double_t* _binv" \
+  target="_wgt,_errLo,_errHi,_sumw2,_binv" \
+  code="{ std::cout << \"_arrSize=\" << onfile._arrSize << std::endl; \
+          std::cout << \"_wgt=\" << onfile._wgt << std::endl; \
+          std::cout << \"_wgt[0]=\" << onfile._wgt[0] << std::endl; \
+          _wgt.  assign(onfile._wgt,   onfile._wgt   + onfile._arrSize); \
+          _errLo.assign(onfile._errLo, onfile._errLo + onfile._arrSize); \
+          _errHi.assign(onfile._errHi, onfile._errHi + onfile._arrSize); \
+          _sumw2.assign(onfile._sumw2, onfile._sumw2 + onfile._arrSize); \
+          _binv. assign(onfile._binv,  onfile._binv  + onfile._arrSize); \
+          std::cout << \"_wgt[0]=\" << onfile._wgt[0]  << '\t' << _wgt[0] << std::endl; \
+          std::cout << \"_errLo[0]=\" << onfile._errLo[0] << '\t' << _errLo[0] << std::endl; \
+          std::cout << \"_errHi[0]=\" << onfile._errHi[0] << '\t' << _errHi[0] << std::endl; \
+          std::cout << \"_sumw2[0]=\" << onfile._sumw2[0] << '\t' << _sumw2[0] << std::endl; \
+          std::cout << \"_binv[0]=\" << onfile._binv[0] << '\t' << _binv[0] << std::endl; \
+          std::cout << \"Done writing.\" << std::endl;}";
 #pragma link C++ class RooDataHist- ;
 #pragma link C++ class RooDataProjBinding+ ;
 #pragma link C++ class RooDataSet- ;

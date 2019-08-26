@@ -67,10 +67,6 @@ RooVectorDataStore::RooVectorDataStore() :
   _extWgtErrLoArray(0),
   _extWgtErrHiArray(0),
   _extSumW2Array(0),
-  _curWgt(1),
-  _curWgtErrLo(0),
-  _curWgtErrHi(0),
-  _curWgtErr(0),
   _cache(0),
   _cacheOwner(0),
   _forcedUpdate(kFALSE)
@@ -97,10 +93,6 @@ RooVectorDataStore::RooVectorDataStore(const char* name, const char* title, cons
   _extWgtErrLoArray(0),
   _extWgtErrHiArray(0),
   _extSumW2Array(0),
-  _curWgt(1),
-  _curWgtErrLo(0),
-  _curWgtErrHi(0),
-  _curWgtErr(0),
   _cache(0),
   _cacheOwner(0),
   _forcedUpdate(kFALSE)
@@ -185,10 +177,7 @@ RooVectorDataStore::RooVectorDataStore(const RooVectorDataStore& other, const ch
   _extWgtErrLoArray(other._extWgtErrLoArray),
   _extWgtErrHiArray(other._extWgtErrHiArray),
   _extSumW2Array(other._extSumW2Array),
-  _curWgt(other._curWgt),
-  _curWgtErrLo(other._curWgtErrLo),
-  _curWgtErrHi(other._curWgtErrHi),
-  _curWgtErr(other._curWgtErr),
+  _currentWeightIndex(other._currentWeightIndex),
   _cache(0),
   _cacheOwner(0),
   _forcedUpdate(kFALSE)
@@ -232,20 +221,14 @@ RooVectorDataStore::RooVectorDataStore(const RooTreeDataStore& other, const RooA
   _extWgtErrLoArray(0),
   _extWgtErrHiArray(0),
   _extSumW2Array(0),
-  _curWgt(1),
-  _curWgtErrLo(0),
-  _curWgtErrHi(0),
-  _curWgtErr(0),
+  _currentWeightIndex(0),
   _cache(0),
   _cacheOwner(0),
   _forcedUpdate(kFALSE)
 {
-  TIterator* iter = _varsww.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
+  for (const auto arg : _varsww) {
     arg->attachToVStore(*this) ;
   }
-  delete iter ;
 
   setAllBuffersNative() ;
   
@@ -277,10 +260,7 @@ RooVectorDataStore::RooVectorDataStore(const RooVectorDataStore& other, const Ro
   _extWgtErrLoArray(other._extWgtErrLoArray),
   _extWgtErrHiArray(other._extWgtErrHiArray),
   _extSumW2Array(other._extSumW2Array),
-  _curWgt(other._curWgt),
-  _curWgtErrLo(other._curWgtErrLo),
-  _curWgtErrHi(other._curWgtErrHi),
-  _curWgtErr(other._curWgtErr),
+  _currentWeightIndex(other._currentWeightIndex),
   _cache(0),
   _forcedUpdate(kFALSE)
 {
@@ -350,19 +330,12 @@ RooVectorDataStore::RooVectorDataStore(const char *name, const char *title, RooA
   _extWgtErrLoArray(0),
   _extWgtErrHiArray(0),
   _extSumW2Array(0),
-  _curWgt(1),
-  _curWgtErrLo(0),
-  _curWgtErrHi(0),
-  _curWgtErr(0),
   _cache(0),
   _forcedUpdate(kFALSE)
 {
-  TIterator* iter = _varsww.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
+  for (const auto arg : _varsww) {
     arg->attachToVStore(*this) ;
   }
-  delete iter ;
 
   setAllBuffersNative() ;
 
@@ -486,31 +459,7 @@ const RooArgSet* RooVectorDataStore::get(Int_t index) const
   }
   
   // Update current weight cache
-  if (_extWgtArray) {
-
-    // If external array is specified use that  
-    _curWgt = _extWgtArray[index] ;
-    _curWgtErrLo = _extWgtErrLoArray[index] ;
-    _curWgtErrHi = _extWgtErrHiArray[index] ;
-    _curWgtErr   = sqrt(_extSumW2Array[index]) ;
-
-  } else if (_wgtVar) {
-
-    // Otherwise look for weight variable
-    _curWgt = _wgtVar->getVal() ;
-    _curWgtErrLo = _wgtVar->getAsymErrorLo() ;
-    _curWgtErrHi = _wgtVar->getAsymErrorHi() ;
-    _curWgtErr   = _wgtVar->hasAsymError() ? ((_wgtVar->getAsymErrorHi() - _wgtVar->getAsymErrorLo())/2)  : _wgtVar->getError() ;
-
-  } // else {
-
-//     // Otherwise return 1 
-//     _curWgt=1.0 ;
-//     _curWgtErrLo = 0 ;
-//     _curWgtErrHi = 0 ;
-//     _curWgtErr = 0 ;
-    
-//   }
+  _currentWeightIndex = index;
 
   if (_cache) {
     _cache->get(index) ;
@@ -553,31 +502,7 @@ const RooArgSet* RooVectorDataStore::getNative(Int_t index) const
   }
   
   // Update current weight cache
-  if (_extWgtArray) {
-
-    // If external array is specified use that  
-    _curWgt = _extWgtArray[index] ;
-    _curWgtErrLo = _extWgtErrLoArray[index] ;
-    _curWgtErrHi = _extWgtErrHiArray[index] ;
-    _curWgtErr   = sqrt(_extSumW2Array[index]) ;
-
-  } else if (_wgtVar) {
-
-    // Otherwise look for weight variable
-    _curWgt = _wgtVar->getVal() ;
-    _curWgtErrLo = _wgtVar->getAsymErrorLo() ;
-    _curWgtErrHi = _wgtVar->getAsymErrorHi() ;
-    _curWgtErr   = _wgtVar->hasAsymError() ? ((_wgtVar->getAsymErrorHi() - _wgtVar->getAsymErrorLo())/2)  : _wgtVar->getError() ;
-
-  } else {
-
-    // Otherwise return 1 
-    _curWgt=1.0 ;
-    _curWgtErrLo = 0 ;
-    _curWgtErrHi = 0 ;
-    _curWgtErr = 0 ;
-    
-  }
+  _currentWeightIndex = index;
 
   if (_cache) {
     _cache->getNative(index) ;
@@ -589,23 +514,13 @@ const RooArgSet* RooVectorDataStore::getNative(Int_t index) const
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Return the weight of the n-th data point (n='index') in memory
-
+/// Load data point at `index`, and return its weight.
 Double_t RooVectorDataStore::weight(Int_t index) const 
 {
   get(index) ;
   return weight() ;
 }
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-/// Return the weight of the n-th data point (n='index') in memory
-
-Double_t RooVectorDataStore::weight() const 
-{
-  return _curWgt ;
-}
 
 
 
@@ -650,7 +565,8 @@ Double_t RooVectorDataStore::weightError(RooAbsData::ErrorType etype) const
 void RooVectorDataStore::weightError(Double_t& lo, Double_t& hi, RooAbsData::ErrorType etype) const
 {
   if (_extWgtArray) {
-    
+    double wgt;
+
     // We have a weight array, use that info
     switch (etype) {
       
@@ -664,22 +580,23 @@ void RooVectorDataStore::weightError(Double_t& lo, Double_t& hi, RooAbsData::Err
       
     case RooAbsData::Poisson:
       // Weight may be preset or precalculated    
-      if (_curWgtErrLo>=0) {
-	lo = _curWgtErrLo ;
-	hi = _curWgtErrHi ;
-	return ;
+      if (_extWgtErrLoArray && _extWgtErrLoArray[_currentWeightIndex] >= 0) {
+        lo = _extWgtErrLoArray[_currentWeightIndex];
+        hi = _extWgtErrHiArray[_currentWeightIndex];
+        return ;
       }
       
       // Otherwise Calculate poisson errors
+      wgt = weight();
       Double_t ym,yp ;  
-      RooHistError::instance().getPoissonInterval(Int_t(weight()+0.5),ym,yp,1) ;
-      lo = weight()-ym ;
-      hi = yp-weight() ;
+      RooHistError::instance().getPoissonInterval(Int_t(wgt+0.5),ym,yp,1);
+      lo = wgt-ym;
+      hi = yp-wgt;
       return ;
       
     case RooAbsData::SumW2:
-      lo = _curWgtErr ;
-      hi = _curWgtErr ;
+      lo = sqrt( _extSumW2Array ? _extSumW2Array[_currentWeightIndex] : _extWgtArray[_currentWeightIndex] );
+      hi = lo;
       return ;
       
     case RooAbsData::None:
