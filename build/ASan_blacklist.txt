@@ -1,0 +1,4 @@
+src:*interpreter/llvm/*
+src:*clingutils*
+src:*core/dictgen/*
+src:*core/metacling/*

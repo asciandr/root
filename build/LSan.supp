@@ -1,0 +1,5 @@
+leak:llvm::SmallVector
+leak:llvm::TinyPtr
+leak:llvm::FoldingSetBase
+#leak:cling
+#leak:clang

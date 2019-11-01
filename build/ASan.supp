@@ -1,0 +1,5 @@
+interceptor_via_lib:libCling.so
+interceptor_via_fun:setAttrsImpl
+interceptor_via_fun:grow_pod
+interceptor_via_fun:clang::*
+interceptor_via_fun:TMetaUtils::*

@@ -123,7 +123,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
 
   set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
   set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+  if(${CMAKE_CXX_FLAGS} MATCHES ".*fsanitize=address.*" OR ${CMAKE_CXX_FLAGS_DEBUG} MATCHES ".*fsanitize=address.*")
+    message(WARNING "Disabling no-undefined for linking because address sanitizer is running.")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -shared-libasan")
+  else()
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+  endif()
 
   # Select flags.
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG"           CACHE STRING "Flags for release build with debug info")
