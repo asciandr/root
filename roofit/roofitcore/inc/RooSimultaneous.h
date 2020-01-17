@@ -91,6 +91,8 @@ protected:
 
   virtual void selectNormalization(const RooArgSet* depSet=0, Bool_t force=kFALSE) ;
   virtual void selectNormalizationRange(const char* rangeName=0, Bool_t force=kFALSE) ;
+  std::map<int, RooProxy<RooAbsPdf>>::const_iterator findPdfByProxyName(const std::string& categoryName) const;
+
   mutable RooSetProxy _plotCoefNormSet ;
   const TNamed* _plotCoefNormRange ;
 
@@ -111,10 +113,9 @@ protected:
 	                               const RooArgSet* auxProto=0, Bool_t verbose= kFALSE) const ;
  
   RooCategoryProxy _indexCat ; // Index category
-  TList    _pdfProxyList ;     // List of PDF proxies (named after applicable category state)
-  Int_t    _numPdf ;           // Number of registered PDFs
+  std::map<int, RooProxy<RooAbsPdf>> _pdfProxyList; // List of PDF proxies (indexed by category states)
 
-  ClassDef(RooSimultaneous,2)  // Simultaneous operator p.d.f, functions like C++  'switch()' on input p.d.fs operating on index category5A
+  ClassDef(RooSimultaneous,3)  // Simultaneous operator p.d.f, functions like C++  'switch()' on input p.d.fs operating on index category
 };
 
 #endif

@@ -80,24 +80,30 @@
 #pragma link C++ class RooConvIntegrandBinding+ ;
 #pragma link C++ class RooCurve+ ;
 #pragma link C++ class RooCustomizer+ ;
-#pragma read sourceClass="RooDataHist" targetClass="RooDataHist" version="[3-4]" \
-  source="Int_t _arrSize; Double_t* _wgt; Double_t* _errLo; Double_t* _errHi; Double_t* _sumw2; Double_t* _binv" \
-  target="_wgt,_errLo,_errHi,_sumw2,_binv" \
-  code="{ std::cout << \"_arrSize=\" << onfile._arrSize << std::endl; \
-          std::cout << \"_wgt=\" << onfile._wgt << std::endl; \
-          std::cout << \"_wgt[0]=\" << onfile._wgt[0] << std::endl; \
-          _wgt.  assign(onfile._wgt,   onfile._wgt   + onfile._arrSize); \
-          _errLo.assign(onfile._errLo, onfile._errLo + onfile._arrSize); \
-          _errHi.assign(onfile._errHi, onfile._errHi + onfile._arrSize); \
-          _sumw2.assign(onfile._sumw2, onfile._sumw2 + onfile._arrSize); \
-          _binv. assign(onfile._binv,  onfile._binv  + onfile._arrSize); \
-          std::cout << \"_wgt[0]=\" << onfile._wgt[0]  << '\t' << _wgt[0] << std::endl; \
-          std::cout << \"_errLo[0]=\" << onfile._errLo[0] << '\t' << _errLo[0] << std::endl; \
-          std::cout << \"_errHi[0]=\" << onfile._errHi[0] << '\t' << _errHi[0] << std::endl; \
-          std::cout << \"_sumw2[0]=\" << onfile._sumw2[0] << '\t' << _sumw2[0] << std::endl; \
-          std::cout << \"_binv[0]=\" << onfile._binv[0] << '\t' << _binv[0] << std::endl; \
-          std::cout << \"Done writing.\" << std::endl;}";
 #pragma link C++ class RooDataHist- ;
+#pragma read sourceClass="RooDataHist" targetClass="RooDataHist" version="[3-4]" \
+  source="int _arrSize; double* _wgt;" \
+  target="_wgtVec" \
+  include="TVirtualStreamerInfo.h" \
+  code="{ TClass::GetClass(\"RooDataHist@@4\")->GetStreamerInfo()->ls(); \
+          _wgtVec.assign(onfile._wgt, onfile._wgt + onfile._arrSize); }"
+//#pragma read sourceClass="RooDataHist" targetClass="RooDataHist" version="[3-4]" \
+//  source="int _arrSize; std:: vector<int> _idxMult; \
+//          double* _wgt; double* _errLo; double* _errHi; double* _sumw2; double* _binv; \
+//          RooArgSet _realVars;" \
+//  target="_idxMult,_wgtVec,_errLoVec,_errHiVec,_sumw2Vec,_binvVec,_realVars"
+//  include="TVirtualStreamerInfo.h" \
+//  code="{ TClass::GetClass(\"RooDataHist@@4\")->GetStreamerInfo()->ls(); \
+//          std::cout << \"onfile._arrSize=\" << onfile._arrSize << std::endl; \
+//          std::cout << \"onfile._wgt=\" << onfile._wgt << std::endl; \
+//          _wgtVec.assign(onfile._wgt, onfile._wgt + onfile._arrSize); \
+//          _errLoVec.assign(onfile._errLo, onfile._errLo + onfile._arrSize); \
+//          _errHiVec.assign(onfile._errHi, onfile._errHi + onfile._arrSize); \
+//          _sumw2Vec.assign(onfile._sumw2, onfile._sumw2 + onfile._arrSize); \
+//          _binvVec.assign(onfile.binv, onfile.binv + onfile._arrSize); \
+//          std::cout << \"Ran assignments to new class ...\" << std::endl; \
+//          std::cout << \"_wgt[0-1]=\" << onfile._wgt[0] << \", \" << onfile._wgt[1] << \"\t->\t\" << _wgtVec[0] << \", \" << _wgtVec[1] << std::endl; \
+//          std::cout << \"Done reading v4 object _wgt.\" << std::endl;}"
 #pragma link C++ class RooDataProjBinding+ ;
 #pragma link C++ class RooDataSet- ;
 #pragma link C++ class RooDirItem+ ;
@@ -224,6 +230,18 @@
 #pragma link C++ class RooTrace+ ;
 #pragma link C++ class RooUniformBinning+ ;
 #pragma link C++ class RooSimultaneous+ ;
+#pragma read sourceClass="RooSimultaneous" targetClass="RooSimultaneous" version="[1-2]" \
+  source="TList _pdfProxyList; " target="_pdfProxyList" \
+  code="{onfile._pdfProxyList.Print(""); \
+         for (const auto obj : onfile._pdfProxyList) { \
+          const auto pdfProxy = static_cast<const RooRealProxy*>(obj); \
+          const auto indexType = newObj->indexCat().lookupType(pdfProxy->GetName()); \
+          assert(indexType); \
+          _pdfProxyList.emplace(std::piecewise_construct, \
+              std::forward_as_tuple(indexType->getVal()), \
+              std::forward_as_tuple(pdfProxy->GetName(), newObj, *pdfProxy)); \
+          } \
+        }"
 #pragma link C++ class RooRealSumPdf+ ;
 #pragma link C++ class RooRealSumFunc + ;
 #pragma link C++ class RooResolutionModel+ ;
