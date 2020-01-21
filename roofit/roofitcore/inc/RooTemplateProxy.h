@@ -65,8 +65,14 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////
   /// Copy constructor.
-  RooTemplateProxy(const char* theName, RooAbsArg* owner, const RooTemplateProxy& other) :
-    RooArgProxy(theName, owner, other) { }
+  /// It will accept any RooTemplateProxy and attempt a dynamic_cast on its payload.
+  /// \throw std::invalid_argument if types payloads are incompatible.
+  template<typename U>
+  RooTemplateProxy(const char* theName, RooAbsArg* owner, const RooTemplateProxy<U>& other) :
+    RooArgProxy(theName, owner, other) {
+    if (_arg && !dynamic_cast<const T*>(_arg))
+      throw std::invalid_argument("Tried to construct a RooTemplateProxy with incompatible payload.");
+  }
 
   virtual TObject* Clone(const char* newName=0) const { return new RooTemplateProxy<T>(newName,_owner,*this); }
 
