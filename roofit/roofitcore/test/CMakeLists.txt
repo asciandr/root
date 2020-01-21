@@ -15,3 +15,5 @@ if(NOT MSVC OR win_broken_tests)
 endif()
 ROOT_ADD_GTEST(testRooWrapperPdf testRooWrapperPdf.cxx LIBRARIES Gpad RooFitCore)
 ROOT_ADD_GTEST(testGenericPdf testGenericPdf.cxx LIBRARIES RooFitCore)
+ROOT_ADD_GTEST(testRooProxy testRooProxy.cxx LIBRARIES RooFitCore)
+
