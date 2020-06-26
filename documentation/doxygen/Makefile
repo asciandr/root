@@ -1,7 +1,8 @@
 
 .PHONY: filter folders mathjax images doxygen
 
-PYTHON_EXECUTABLE ?= /usr/bin/python
+NJOB ?= $(shell nproc)
+PYTHON_EXECUTABLE ?= python3
 export PYTHON_EXECUTABLE
 
 DOXYGEN_OUTPUT_DIRECTORY ?= $(HOME)/rootdoc
@@ -20,7 +21,7 @@ define MkDir
 	+@[ -d $1 ] || mkdir -p $1
 endef
 
-all: filter folders mathjax images doxygen
+all: filter mathjax images doxygen replaceCollaborationDiagrams notebooks rootWork
 
 filter:
 	`root-config --cxx` -o filter filter.cxx -std=c++11 -O2
@@ -34,6 +35,7 @@ images:
 	cp images/* $(DOXYGEN_IMAGE_PATH)
 
 doxygen: filter
+	rm -f tutorialWorklist_py tutorialWorklist_root
 	$(call MkDir,$(DOXYGEN_OUTPUT_DIRECTORY))
 	$(call MkDir,$(DOXYGEN_EXAMPLE_PATH))
 	$(call MkDir,$(DOXYGEN_NOTEBOOK_PATH))
@@ -41,8 +43,18 @@ doxygen: filter
 	doxygen
 	./listlibs.sh
 	rm -rf files c1* *.ps *.png *.svg *.pdf *.root *.xpm *.out *.dat *.dtd *.dot *.txt listofclass.sh
+
+tutorialWorklist_py: doxygen
+tutorialWorklist_root: doxygen
+
+notebooks: tutorialWorklist_py
+	cp ../../tutorials/unfold/*xml ../../tutorials/unfold/*dtd $(DOXYGEN_NOTEBOOK_PATH)/
+	bash ./makeNotebooks.sh $< -j$(NJOB)
 	rm -f $(DOXYGEN_NOTEBOOK_PATH)/*.root
 
+rootWork: tutorialWorklist_root
+	xargs -L 1 -P 12 root < $<
+
 clean:
-	rm -r $(DOXYGEN_OUTPUT_DIRECTORY) filter htmlfooter.html dataset*
+	rm -r $(DOXYGEN_OUTPUT_DIRECTORY) filter htmlfooter.html dataset* tutorialWorklist_py tutorialWorklist_root
 
