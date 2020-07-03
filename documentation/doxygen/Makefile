@@ -1,5 +1,5 @@
 
-.PHONY: filter folders mathjax images doxygen
+.PHONY: filter mathjax images doxygen replaceCollaborationDiagrams
 
 NJOB ?= $(shell nproc)
 PYTHON_EXECUTABLE ?= python3
@@ -41,8 +41,13 @@ doxygen: filter
 	$(call MkDir,$(DOXYGEN_NOTEBOOK_PATH))
 	./makehtmlfooter.sh > htmlfooter.html
 	doxygen
-	./listlibs.sh
-	rm -rf files c1* *.ps *.png *.svg *.pdf *.root *.xpm *.out *.dat *.dtd *.dot *.txt listofclass.sh
+	rm -rf files c1* *.ps *.png *.svg *.pdf *.root *.xpm *.out *.dat *.dtd *.dot *.txt
+
+collaborationDiagrams:
+	bash ./makeCollaborationDiagrams.sh
+
+replaceCollaborationDiagrams: doxygen collaborationDiagrams 
+	bash ./modifyClassWebpages.sh -j$(NJOB)
 
 tutorialWorklist_py: doxygen
 tutorialWorklist_root: doxygen
